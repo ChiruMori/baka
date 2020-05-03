@@ -4,10 +4,8 @@ import tester.Test;
 
 /**
  * @author cxlm
- * Created 2020/5/2 21:21
- * Modified 2020/5/2 21:21 by cxlm
- * Cirno bless, there is no bug in the code.
- * Description 配置加载测试
+ * 2020/5/2 21:21
+ * 配置加载测试
  */
 public class ConfigTest {
 

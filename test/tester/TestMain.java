@@ -2,7 +2,6 @@ package tester;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.Enumeration;
@@ -12,10 +11,8 @@ import java.util.Set;
 
 /**
  * @author cxlm
- * Created 2020/5/2 21:25
- * Modified 2020/5/2 21:25 by cxlm
- * Cirno bless, there is no bug in the code.
- * Description 测试总控类
+ * 2020/5/2 21:25
+ * 测试总控类
  */
 public class TestMain {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -38,7 +35,7 @@ public class TestMain {
                 if(method.isAnnotationPresent(Test.class)){
                     try {
                         method.invoke(null);
-                    } catch (IllegalAccessException | InvocationTargetException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }

@@ -6,10 +6,8 @@ import java.util.Date;
 
 /**
  * @author cxlm
- * Created 2020/5/2 20:43
- * Modified 2020/5/2 20:43 by cxlm
- * Cirno bless, there is no bug in the code.
- * Description 公用日志
+ * 2020/5/2 20:43
+ * 公用日志
  */
 public class Logger {
 

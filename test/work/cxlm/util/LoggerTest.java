@@ -4,10 +4,8 @@ import tester.Test;
 
 /**
  * @author cxlm
- * Created 2020/5/2 20:53
- * Modified 2020/5/2 20:53 by cxlm
- * Cirno bless, there is no bug in the code.
- * Description 全局日志测试
+ * 2020/5/2 20:53
+ * 全局日志测试
  */
 public class LoggerTest {
     static Logger outerLogger = Logger.getLogger(LoggerTest.class);

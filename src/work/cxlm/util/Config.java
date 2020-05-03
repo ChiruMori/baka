@@ -8,10 +8,8 @@ import java.util.Properties;
 
 /**
  * @author cxlm
- * Created 2020/5/2 19:57
- * Modified 2020/5/2 19:57 by cxlm
- * Cirno bless, there is no bug in the code.
- * Description 配置读取与默认配置
+ * 2020/5/2 19:57
+ * 配置读取与默认配置
  */
 public class Config {
 
@@ -20,7 +18,7 @@ public class Config {
      */
     private static final String CONFIG_FILE_PATH = "config.properties";
 
-    private static Logger logger = Logger.getLogger(Config.class);
+    private static final Logger LOGGER = Logger.getLogger(Config.class);
     private static Properties dict = null;
 
     static {
@@ -35,9 +33,15 @@ public class Config {
             System.err.println("加载配置文件出错" + e.getLocalizedMessage());
             throw new Error("加载配置文件失败", e);
         }
-        logger.log(Logger.Level.NORMAL, "共解析 " + dict.size() + " 条配置");
+        LOGGER.log(Logger.Level.NORMAL, "共解析 " + dict.size() + " 条配置");
     }
 
+    /**
+     * 获取在 config.properties 中配置的信息
+     *
+     * @param key 键
+     * @return 指定 key 对应的字符串值
+     */
     public static String get(String key) {
         return (String) dict.get(key);
     }
