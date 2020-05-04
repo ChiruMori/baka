@@ -8,6 +8,7 @@ import work.cxlm.util.Logger;
  * 指示程序启动的阶段，不可以修改本类类名、方法名，可以在指定的方法中实现功能
  * 本类方法均通过反射运行
  */
+@SuppressWarnings("unused")
 public class Process {
 
     private static final Process instance = new Process();  // 饿汉式单例
@@ -35,9 +36,5 @@ public class Process {
         startExpenseTime = System.currentTimeMillis() - startExpenseTime;
         logger.log(Logger.Level.NORMAL, "完成启动，耗时 " + startExpenseTime + " ms");
         // state = ProcessState.RUNNING;  // 修改运行状态
-    }
-
-    private void beforeTerminate() {
-        logger.log(Logger.Level.NORMAL, "终止服务");
     }
 }

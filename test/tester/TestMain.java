@@ -15,7 +15,10 @@ import java.util.Set;
  * 测试总控类
  */
 public class TestMain {
+    private static final boolean ENABLE_TEST = true;
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
+        if (!ENABLE_TEST) return;
         ClassLoader rootClassLoader = Thread.currentThread().getContextClassLoader();
         Set<Class<?>> classSet = new HashSet<>();
         String packageName = "work.cxlm";

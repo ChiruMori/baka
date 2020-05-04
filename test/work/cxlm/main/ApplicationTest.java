@@ -2,13 +2,9 @@ package work.cxlm.main;
 
 import tester.Test;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 /**
  * @author cxlm
@@ -21,11 +17,15 @@ public class ApplicationTest {
     public static void startMain() throws ReflectiveOperationException, IOException {
         Application.main(null);
 
-        try(Socket socket = new Socket(InetAddress.getLocalHost(), 8547)){
+        try (Socket socket = new Socket(InetAddress.getLocalHost(), 8547)) {
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            writer.write("this is a pen. this is a pen. this is a pen. this is a pen. this is a pen. this is a pen. this is a pen.");
-            writer.flush();
-            writer.close();
+            writer.write("GET / HTTP/1.1\r\nHost: 127.0.0.1:8547\r\nAccept: text/html\r\n\r\n");  // 模拟一个简单的 Get 请求
+            writer.flush(); // 不可缺少
+            //writer.close();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            char[] buffer = new char[1024];
+            int readChars = reader.read(buffer);
+            System.out.println("接受到响应：" + new String(buffer, 0, readChars));
         }
     }
 

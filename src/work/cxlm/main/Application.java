@@ -29,23 +29,17 @@ public class Application {
         beforeStartingMethod.setAccessible(true);
         beforeStartingMethod.invoke(instance);
         initServer();
+        // TODO 路由配置
+        LOGGER.log(Logger.Level.NORMAL, "监听服务代码");
         Method afterStartingMethod = process.getDeclaredMethod("afterStarting");
         afterStartingMethod.setAccessible(true);
         afterStartingMethod.invoke(instance);
-        try {
-            // TODO 监听
-            LOGGER.log(Logger.Level.NORMAL, "监听服务代码");
-        } finally {
-            Method beforeTerminateMethod = process.getDeclaredMethod("beforeTerminate");
-            beforeTerminateMethod.setAccessible(true);
-            beforeTerminateMethod.invoke(instance);
-        }
     }
 
     private static void initServer() {
         pool = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(),
                 Runtime.getRuntime().availableProcessors() << 1, 500, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>());
+                new LinkedBlockingQueue<>(), run -> new Thread(run, "Reactor 线程"));
         try {
             MainReactor mainReactor = new MainReactor();
             pool.submit(mainReactor);

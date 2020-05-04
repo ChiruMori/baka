@@ -35,7 +35,7 @@ public class MainReactor implements Runnable{
         channel.configureBlocking(false);  // 配置非阻塞
         int listenPort = Integer.parseInt(Config.get("port"));
         channel.socket().bind(new InetSocketAddress(listenPort));
-        channel.register(selector, SelectionKey.OP_ACCEPT);  // 当前通道接受 socket 操作
+        channel.register(selector, SelectionKey.OP_ACCEPT);  // 当前通道注册选择器
     }
 
     private void allocateSubReactors() throws IOException {
@@ -59,14 +59,12 @@ public class MainReactor implements Runnable{
                     SelectionKey nowKey = iterator.next();
                     iterator.remove();
                     if (nowKey.isValid() && nowKey.isAcceptable()) {
-                        ServerSocketChannel readableChannel = (ServerSocketChannel) nowKey.channel();
-                        SocketChannel socketChannel = readableChannel.accept();  // 接受请求
-                        socketChannel.configureBlocking(false);
+                        SocketChannel clientRequest = channel.accept();  // 接受请求
+                        clientRequest.configureBlocking(false);
                         if (nowSubReactorIndex >= subReactorCount) nowSubReactorIndex = 0;
                         SubReactor target = subReactors[nowSubReactorIndex++];
                         target.restartFlag = true;
-                        // FIXME: 注意，这里可能遗漏一次 wakeup，但是逻辑上并不缺少
-                        target.dispatch(socketChannel);
+                        target.dispatch(clientRequest);
                         target.wakeup();
                         target.restartFlag = false;
                     }

@@ -1,5 +1,7 @@
 package work.cxlm.main;
 
+import work.cxlm.http.HttpRequest;
+import work.cxlm.http.RequestDealer;
 import work.cxlm.util.Logger;
 
 import java.io.IOException;
@@ -16,7 +18,7 @@ import java.util.Set;
  * 从属 Reactor
  */
 public class SubReactor implements Runnable {
-    private Selector selector;
+    private final Selector selector;
     private static final Logger LOGGER = Logger.getLogger(SubReactor.class);
     boolean restartFlag = false;
 
@@ -25,7 +27,7 @@ public class SubReactor implements Runnable {
     }
 
     void dispatch(SocketChannel channel) throws ClosedChannelException {
-        channel.register(selector, SelectionKey.OP_READ);  // 注册可读处理
+        channel.register(selector, SelectionKey.OP_READ);  // 当前选择器将负责指定信道的读取、写入消息
     }
 
     // 当新事件注册时，需要唤醒阻塞，当注册完成后再进行监听
@@ -47,22 +49,44 @@ public class SubReactor implements Runnable {
                 while (iterator.hasNext()) {
                     SelectionKey key = iterator.next();
                     iterator.remove();
-                    if (key.isValid() && key.isReadable()) {
-                        ByteBuffer buffer = ByteBuffer.allocate(16);
-                        SocketChannel readChannel = (SocketChannel) key.channel();
-                        int readCount = readChannel.read(buffer);
-                        if (readCount > 0) {
-                            // TODO 拼接 TCP 请求报文
-                            System.out.println(new String(buffer.array(), 0, readCount));
-                        } else if (readCount < 0) {
-                            readChannel.close();
-                            key.cancel();
+                    if (key.isReadable()) {
+                        ByteBuffer buffer = ByteBuffer.allocate(RequestDealer.BUFFER_SIZE);
+                        SocketChannel clientInfoChannel = (SocketChannel) key.channel();
+                        int readCount = clientInfoChannel.read(buffer);
+                        if (readCount > 0) {  // 记录请求
+                            RequestDealer.put(clientInfoChannel, buffer.array(), readCount);
                         }
+                        if (readCount < RequestDealer.BUFFER_SIZE) {
+                            clientInfoChannel.shutdownInput();
+                            clientInfoChannel.register(selector, SelectionKey.OP_WRITE);  // 注册为可写
+                        }
+                    } else if (key.isWritable()) {
+                        SocketChannel clientInfoChannel = (SocketChannel) key.channel();
+                        HttpRequest request = RequestDealer.getAndRemove(clientInfoChannel);
+                        LOGGER.log(Logger.Level.NORMAL, request.toString());
+                        // TODO 处理用户请求、返回
+                        byteToChannel("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nResponse 通了".getBytes(), clientInfoChannel);
+                        clientInfoChannel.close();
+                        key.cancel();
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private static void byteToChannel(byte[] bytes, SocketChannel client) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(RequestDealer.BUFFER_SIZE);
+        int offset = 0, groupSize, total = bytes.length;
+        while (offset < total) {
+            groupSize = offset + RequestDealer.BUFFER_SIZE < total ?
+                    RequestDealer.BUFFER_SIZE : total % RequestDealer.BUFFER_SIZE;
+            buffer.put(bytes, offset, groupSize);
+            buffer.flip();
+            offset += groupSize;
+            client.write(buffer);
+            buffer.clear();
         }
     }
 }
