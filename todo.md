@@ -1,5 +1,4 @@
 ## TODO List
-* 解析 HTTP 请求（HttpRequest, HttpResponse）
 * URL 映射（仿 Controller）
 * Session, Cookie 支持
 * 静态文件服务
@@ -10,3 +9,5 @@
 ## DONE
 * 2020.05.03 配置解析、自动化测试工具
 * 2020.05.05 NIO 请求响应框架搭建完成
+* 2020.05.05 解析 HTTP 请求（HttpRequest, HttpResponse）
+* 2020.05.05 直接将部分 org.json 的代码放到源码中实现 json 数据解析

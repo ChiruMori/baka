@@ -1,6 +1,7 @@
 package work.cxlm.main;
 
 import work.cxlm.http.HttpRequest;
+import work.cxlm.http.HttpResponse;
 import work.cxlm.http.RequestDealer;
 import work.cxlm.util.Logger;
 
@@ -57,15 +58,18 @@ public class SubReactor implements Runnable {
                             RequestDealer.put(clientInfoChannel, buffer.array(), readCount);
                         }
                         if (readCount < RequestDealer.BUFFER_SIZE) {
+                            RequestDealer.completeRequest(clientInfoChannel);
                             clientInfoChannel.shutdownInput();
                             clientInfoChannel.register(selector, SelectionKey.OP_WRITE);  // 注册为可写
                         }
                     } else if (key.isWritable()) {
                         SocketChannel clientInfoChannel = (SocketChannel) key.channel();
                         HttpRequest request = RequestDealer.getAndRemove(clientInfoChannel);
-                        LOGGER.log(Logger.Level.NORMAL, request.toString());
-                        // TODO 处理用户请求、返回
-                        byteToChannel("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nResponse 通了".getBytes(), clientInfoChannel);
+                        HttpResponse response = new HttpResponse();
+                        // TODO：分发 request, response 以处理请求
+                        LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
+                        byteToChannel(response.getHeaderData(), clientInfoChannel);
+                        byteToChannel(response.getBodyData(), clientInfoChannel);
                         clientInfoChannel.close();
                         key.cancel();
                     }
