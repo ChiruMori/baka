@@ -2,7 +2,6 @@ package work.cxlm.main;
 
 import work.cxlm.http.HttpRequest;
 import work.cxlm.http.HttpResponse;
-import work.cxlm.http.RequestDealer;
 import work.cxlm.util.Logger;
 
 import java.io.IOException;
@@ -12,6 +11,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author cxlm
@@ -21,71 +22,96 @@ import java.util.Set;
 public class SubReactor implements Runnable {
     private final Selector selector;
     private static final Logger LOGGER = Logger.getLogger(SubReactor.class);
-    boolean restartFlag = false;
+    private final AtomicBoolean hasWork;
+    private final ReentrantLock mutex;  // 代码块互斥控制，与自旋锁效果相同，问题相同
+    private final ReentrantLock blockingFlag;
 
     SubReactor() throws IOException {
         selector = Selector.open();
+        hasWork = new AtomicBoolean(false);
+        mutex = new ReentrantLock();
+        blockingFlag = new ReentrantLock();
     }
 
     void dispatch(SocketChannel channel) throws ClosedChannelException {
+        mutex.lock();
         channel.register(selector, SelectionKey.OP_READ);  // 当前选择器将负责指定信道的读取、写入消息
-    }
-
-    // 当新事件注册时，需要唤醒阻塞，当注册完成后再进行监听
-    void wakeup() {
-        selector.wakeup();
+        if (!hasWork.get()) {
+            hasWork.set(true);
+            if (blockingFlag.hasQueuedThreads()) {
+                blockingFlag.unlock();
+            }
+        }
+        mutex.unlock();
     }
 
     @SuppressWarnings("all")
     public void run() {
         for (; ; ) {
-            if (restartFlag) {
-                Thread.onSpinWait();
-                continue;
-            }
             try {
-                if (selector.select() <= 0) continue;
+                if (selector.select(100) <= 0) continue;  // 不在这里阻塞
                 Set<SelectionKey> keys = selector.selectedKeys();
+                mutex.lock();
+                hasWork.set(false);
+                mutex.unlock();
                 var iterator = keys.iterator();
                 while (iterator.hasNext()) {
                     SelectionKey key = iterator.next();
                     iterator.remove();
                     if (key.isReadable()) {
-                        ByteBuffer buffer = ByteBuffer.allocate(RequestDealer.BUFFER_SIZE);
+                        ByteBuffer buffer = ByteBuffer.allocate(Application.BUFFER_SIZE);
                         SocketChannel clientInfoChannel = (SocketChannel) key.channel();
                         int readCount = clientInfoChannel.read(buffer);
                         if (readCount > 0) {  // 记录请求
-                            RequestDealer.put(clientInfoChannel, buffer.array(), readCount);
+                            HttpRequest target = (HttpRequest) key.attachment();
+                            if (target == null) {
+                                target = new HttpRequest();
+                                key.attach(target);
+                            }
+                            target.putData(buffer.array(), readCount);
                         }
-                        if (readCount < RequestDealer.BUFFER_SIZE) {
-                            RequestDealer.completeRequest(clientInfoChannel);
+                        if (readCount < Application.BUFFER_SIZE) {
+                            HttpRequest request = (HttpRequest) key.attachment();
                             clientInfoChannel.shutdownInput();
-                            clientInfoChannel.register(selector, SelectionKey.OP_WRITE);  // 注册为可写
+                            if (request != null) {
+                                request.resolve();
+                                clientInfoChannel.register(selector, SelectionKey.OP_WRITE, request);  // 注册为可写
+                            } else {  // 使用浏览器进行测试时发现，浏览器偶尔会发送为空的请求，如果不处理将导致从 Reactor 所在的整个线程死亡
+                                LOGGER.log(Logger.Level.ERROR, "非法请求");
+                                clientInfoChannel.close();
+                                key.cancel();
+                            }
                         }
+                        // LOGGER.log(Logger.Level.NORMAL, clientInfoChannel.hashCode() + " read " + new String(buffer.array(), 0, readCount));
                     } else if (key.isWritable()) {
                         SocketChannel clientInfoChannel = (SocketChannel) key.channel();
-                        HttpRequest request = RequestDealer.getAndRemove(clientInfoChannel);
-                        HttpResponse response = new HttpResponse();
-                        // TODO：分发 request, response 以处理请求
-                        LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
-                        byteToChannel(response.getHeaderData(), clientInfoChannel);
-                        byteToChannel(response.getBodyData(), clientInfoChannel);
+                        // LOGGER.log(Logger.Level.NORMAL, clientInfoChannel.hashCode() + " writing...");
+                        HttpRequest request = (HttpRequest) key.attachment();
+                        if (request != null) {
+                            HttpResponse response = new HttpResponse();
+                            ControllerLinker.deal(request, response);  // 处理用户请求
+                            LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
+                            byteToChannel(response.getHeaderRawData(), clientInfoChannel);
+                            byteToChannel(response.getBodyRawData(), clientInfoChannel);
+                        }
                         clientInfoChannel.close();
                         key.cancel();
                     }
                 }
-            } catch (IOException e) {
+            } catch (Throwable e) {
+                // 捕获所有歪门邪道的情况，如果不进行捕获，可能线程咋死的都不知道
+                LOGGER.log(Logger.Level.ERROR, "异常终止: " + e.getLocalizedMessage());
                 e.printStackTrace();
             }
         }
     }
 
     private static void byteToChannel(byte[] bytes, SocketChannel client) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(RequestDealer.BUFFER_SIZE);
+        ByteBuffer buffer = ByteBuffer.allocate(Application.BUFFER_SIZE);
         int offset = 0, groupSize, total = bytes.length;
         while (offset < total) {
-            groupSize = offset + RequestDealer.BUFFER_SIZE < total ?
-                    RequestDealer.BUFFER_SIZE : total % RequestDealer.BUFFER_SIZE;
+            groupSize = offset + Application.BUFFER_SIZE < total ?
+                    Application.BUFFER_SIZE : total % Application.BUFFER_SIZE;
             buffer.put(bytes, offset, groupSize);
             buffer.flip();
             offset += groupSize;

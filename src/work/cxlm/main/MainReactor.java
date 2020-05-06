@@ -39,7 +39,7 @@ public class MainReactor implements Runnable{
     }
 
     private void allocateSubReactors() throws IOException {
-        int coreCount = Runtime.getRuntime().availableProcessors();
+        int coreCount = Runtime.getRuntime().availableProcessors() - 1;
         subReactors = new SubReactor[coreCount];  // 根据处理器数目分配从 Reactor
         for (int i = 0; i < subReactors.length; i++) {
             subReactors[i] = new SubReactor();
@@ -63,10 +63,10 @@ public class MainReactor implements Runnable{
                         clientRequest.configureBlocking(false);
                         if (nowSubReactorIndex >= subReactorCount) nowSubReactorIndex = 0;
                         SubReactor target = subReactors[nowSubReactorIndex++];
-                        target.restartFlag = true;
+                        // target.restartFlag = true;
                         target.dispatch(clientRequest);
-                        target.wakeup();
-                        target.restartFlag = false;
+                        // target.wakeup();
+                        // target.restartFlag = false;
                     }
                 }
             } catch (IOException e) {

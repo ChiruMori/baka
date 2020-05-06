@@ -24,7 +24,7 @@ public class HttpRequest {
     private JSONObject jsonData;
     private JSONArray jsonArray;
 
-    HttpRequest() {
+    public HttpRequest() {
     }
 
     /**
@@ -117,6 +117,10 @@ public class HttpRequest {
 
     public String getMethod() {
         return type.name();
+    }
+
+    public RequestType getType(){
+        return type;
     }
 
     public String getURL() {

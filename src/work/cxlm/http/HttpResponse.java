@@ -22,7 +22,7 @@ public class HttpResponse {
     }
 
     private ResponseStatus status;
-    private Map<String, String> headerMap;
+    private final Map<String, String> headerMap;
     private JSONObject jsonBody;
     private JSONArray arrayBody;
     private byte[] bytesBody;
@@ -52,11 +52,11 @@ public class HttpResponse {
         return resultBuilder.toString();
     }
 
-    public byte[] getHeaderData() {
+    public byte[] getHeaderRawData() {
         return toString().getBytes();
     }
 
-    public byte[] getBodyData() {
+    public byte[] getBodyRawData() {
         byte[] body;
         if (jsonBody != null) body = jsonBody.toString().getBytes();
         else if (arrayBody != null) body = arrayBody.toString().getBytes();
@@ -67,5 +67,54 @@ public class HttpResponse {
 
     public String getStatus() {
         return status.getMsg();
+    }
+
+    public void writeBytesToBody(byte[] data) {
+        bytesBody = data;
+    }
+
+    /**
+     * 设置此响应为 404 Not Found
+     */
+    public void notFound() {
+        status = ResponseStatus.NOT_FOUND;
+    }
+
+    /**
+     * 请求重定向，返回 302 ，并在响应头中指定重定向的地址，重定向由客户端完成，浏览器会重定向到指定的 URL
+     *
+     * @param newUrl 重定向的目标 URL
+     */
+    public void redirect(String newUrl) {
+        status = ResponseStatus.FOUND;
+        setHeader("Location", newUrl);
+    }
+
+    /**
+     * 内部错误
+     */
+    public void internalError() {
+        status = ResponseStatus.INTERNAL_ERROR;
+    }
+
+    /**
+     * 请求错误，一般指示参数不匹配或 method 不匹配
+     */
+    public void badRequest() {
+        status = ResponseStatus.BAD_REQUEST;
+    }
+
+    /**
+     * 禁止访问
+     */
+    public void forbidden() {
+        status = ResponseStatus.FORBIDDEN;
+    }
+
+    /**
+     * 服务器忙
+     */
+    public void busy() {
+        status = ResponseStatus.BUSY;
     }
 }
