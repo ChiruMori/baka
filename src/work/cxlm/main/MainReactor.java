@@ -39,7 +39,7 @@ public class MainReactor implements Runnable{
     }
 
     private void allocateSubReactors() throws IOException {
-        int coreCount = Runtime.getRuntime().availableProcessors() - 1;
+        int coreCount = Math.max(2, Runtime.getRuntime().availableProcessors()) - 1;
         subReactors = new SubReactor[coreCount];  // 根据处理器数目分配从 Reactor
         for (int i = 0; i < subReactors.length; i++) {
             subReactors[i] = new SubReactor();

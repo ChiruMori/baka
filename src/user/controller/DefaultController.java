@@ -3,15 +3,10 @@ package user.controller;
 import work.cxlm.anno.Controller;
 import work.cxlm.anno.Mapping;
 import work.cxlm.http.HttpRequest;
-import work.cxlm.http.HttpResponse;
 import work.cxlm.util.Config;
 import work.cxlm.util.Logger;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.HashMap;
 
 /**
  * @author cxlm

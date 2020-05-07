@@ -52,8 +52,8 @@ public class Application {
 
     private static void initServer() {
         final int[] reactorId = {1};
-        pool = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(),
-                Runtime.getRuntime().availableProcessors(), 5, TimeUnit.MINUTES,  // 定长线程池
+        int coreNum = Math.max(2, Runtime.getRuntime().availableProcessors());
+        pool = new ThreadPoolExecutor(coreNum, coreNum, 5, TimeUnit.MINUTES,  // 定长线程池
                 new LinkedBlockingQueue<>(), run -> new Thread(run, "Reactor 线程" + reactorId[0]++));
         try {
             MainReactor mainReactor = new MainReactor();
