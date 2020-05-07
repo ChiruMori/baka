@@ -12,7 +12,7 @@ import java.util.Date;
 public class Logger {
 
     public enum Level {
-        NORMAL(System.out), ERROR(System.err);
+        NORMAL(System.out), ERROR(System.err), DEBUG(System.out);
 
         private final PrintStream stream;
 
@@ -49,6 +49,7 @@ public class Logger {
      * @param msg   日志信息
      */
     public void log(Level level, String msg) {
+        if (level == Level.DEBUG && Config.get("debug") == null) return;  // 未开启 debug 忽略 debug 级别日志
         SimpleDateFormat format = new SimpleDateFormat("[yyyy.MM.dd HH:mm:ss]");
         String nowTime = format.format(new Date());
         String className = targetClass.getName();

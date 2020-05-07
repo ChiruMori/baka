@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author cxlm
  * Created 2020/5/3 20:21
- * 主类，程序通过本类中的 main 方法启动
+ * 主类，程序入口，程序通过本类中的 main 方法启动
  */
 public class Application {
     private static final Logger LOGGER = Logger.getLogger(Application.class);

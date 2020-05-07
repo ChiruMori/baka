@@ -89,7 +89,7 @@ public class SubReactor implements Runnable {
                         HttpRequest request = (HttpRequest) key.attachment();
                         if (request != null) {
                             HttpResponse response = new HttpResponse();
-                            ControllerLinker.deal(request, response);  // 处理用户请求
+                            ControllerLinker.dispatch(request, response);  // 处理用户请求
                             LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
                             byteToChannel(response.getHeaderRawData(), clientInfoChannel);
                             byteToChannel(response.getBodyRawData(), clientInfoChannel);

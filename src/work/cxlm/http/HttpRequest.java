@@ -1,10 +1,10 @@
 package work.cxlm.http;
 
+import org.json.CookieList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +23,8 @@ public class HttpRequest {
     private Map<String, String> requestBodyMap;  // 请求正文
     private JSONObject jsonData;
     private JSONArray jsonArray;
+    private JSONObject cookies;
+    private HttpSession session;
 
     public HttpRequest() {
     }
@@ -43,7 +45,7 @@ public class HttpRequest {
      * @param key 键
      * @return 值
      */
-    public String getQuery(String key) {
+    public String getParameter(String key) {
         return queryMap.get(key);
     }
 
@@ -53,8 +55,45 @@ public class HttpRequest {
      * @param key 键
      * @return 值
      */
-    public String getBodyData(String key) {
+    public String getAttribute(String key) {
         return requestBodyMap.get(key);
+    }
+
+    /**
+     * 获取请求中的 Json 格式数据
+     *
+     * @return json 字符串解析后的 JsonObject，可能为 null
+     */
+    public JSONObject getJson() {
+        return jsonData;
+    }
+
+    /**
+     * 获取 cookie 的值
+     *
+     * @param key cookie name
+     * @return cookie value
+     */
+    public String getCookie(String key) {
+        return cookies.getString(key);
+    }
+
+    /**
+     * 获取绑定的 Session
+     * 注意，如果当前请求是新的请求，则通过 request 找不到新建的 session
+     * 但是可以通过 response 得到新的 session，再一次请求时，可以获得到这个 session
+     */
+    public HttpSession getSession() {
+        return session;
+    }
+
+    /**
+     * 获取请求中的 Json 数组格式数据
+     *
+     * @return json 字符串解析后的 JsonArray，可能为 null
+     */
+    public JSONArray getJsonArray() {
+        return jsonArray;
     }
 
     // 将拆分的数据重新组合，这不是必须的，通过增大 BUFFER_SIZE 以减少本操作的消耗
@@ -97,6 +136,14 @@ public class HttpRequest {
             else
                 requestBodyMap = resolveQueries(lineString);
         }
+        // 处理 SessionList
+        if (head.containsKey("Cookie")) {
+            cookies = CookieList.toJSONObject(head.get("Cookie"));
+            // 解析 Session
+            if (cookies.has("SID")) {
+                session = HttpSession.getSession(cookies.getString("SID"));
+            }
+        }
         rawData = null;  // 释放源字节数组，辅助 GC
     }
 
@@ -115,11 +162,17 @@ public class HttpRequest {
         return type.name() + " : " + url;
     }
 
+    /**
+     * @return 请求类型的字符串表示，比如 "GET", "POST
+     */
     public String getMethod() {
         return type.name();
     }
 
-    public RequestType getType(){
+    /**
+     * @return 请求类型
+     */
+    public RequestType getType() {
         return type;
     }
 

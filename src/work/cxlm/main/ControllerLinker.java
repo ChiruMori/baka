@@ -4,6 +4,7 @@ import work.cxlm.anno.Controller;
 import work.cxlm.anno.Mapping;
 import work.cxlm.http.HttpRequest;
 import work.cxlm.http.HttpResponse;
+import work.cxlm.http.HttpSession;
 import work.cxlm.http.RequestType;
 import work.cxlm.util.Config;
 import work.cxlm.util.Logger;
@@ -38,7 +39,7 @@ public class ControllerLinker {
     }
 
     // 链式处理请求
-    public static void deal(HttpRequest request, HttpResponse response) {
+    public static void dispatch(HttpRequest request, HttpResponse response) {
         String requestUrl = request.getURL();
         RequestType requestType = request.getType();
         boolean partMatch = false;
@@ -54,7 +55,23 @@ public class ControllerLinker {
                     // 如果拓展更灵活的参数，需要修改这里
                     params[i] = parameterTypes[i] == HttpRequest.class ? request : response;
                 }
-                token.method.invoke(null, params);
+                // 绑定 session，如果没有 session 则生成 session 并绑定到 response，注意
+                // 注意如果没有 session 则通过 request 找不到 session，但是可以通过 response 得到新建的 session 实例
+                HttpSession session = request.getSession();
+                if (session == null) {
+                    session = new HttpSession();
+                    response.setCookie("SID", session.getId());
+                } else {
+                    session.extend();  // session 续命
+                }
+                response.session = session;
+                // 调用方法并处理返回值
+                Object result = token.method.invoke(null, params);
+                if (result != null && response.emptyBody()) {
+                    if (!response.setBody(result)) {
+                        LOGGER.log(Logger.Level.ERROR, "不被支持的返回值类型：" + result.getClass().getName());
+                    }
+                }
             } catch (IllegalAccessException | InvocationTargetException e) {
                 LOGGER.log(Logger.Level.ERROR, e.getLocalizedMessage());
                 e.printStackTrace();

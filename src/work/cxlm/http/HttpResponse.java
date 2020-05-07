@@ -2,7 +2,12 @@ package work.cxlm.http;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import work.cxlm.util.Logger;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -16,21 +21,50 @@ public class HttpResponse {
     private static final SimpleDateFormat DATE_FORMAT;
     private static final String BR = "\r\n";
 
+    private static final Logger LOGGER = Logger.getLogger(HttpResponse.class);
+
+    private static final HashMap<String, String> CONTENT_MAP;
+
     static {
         DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);  // 使用英文
         DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));  // 使用全球标准时间
+
+        CONTENT_MAP = new HashMap<>();
+        CONTENT_MAP.put(".ico", "image/x-icon");
+        CONTENT_MAP.put(".png", "image/png");
+        CONTENT_MAP.put(".jpg", "image/jpeg");
+        CONTENT_MAP.put(".jpeg", "image/jpeg");
+        CONTENT_MAP.put(".gif", "image/gif");
+        CONTENT_MAP.put(".js", "application/javascript; charset=utf-8");
+        CONTENT_MAP.put(".css", "text/css; charset=utf-8");
+        // 未配置的均按照 text/html; charset=utf-8 解析
     }
+
 
     private ResponseStatus status;
     private final Map<String, String> headerMap;
     private JSONObject jsonBody;
     private JSONArray arrayBody;
     private byte[] bytesBody;
+    public HttpSession session;
 
     private static final String VERSION = "HTTP/1.1 ";
 
+    /**
+     * 设置响应头
+     */
     public void setHeader(String key, String val) {
         headerMap.put(key, val);
+    }
+
+    /**
+     * 设置 Cookie，如果需要复杂的 cookie 超时、path 等功能需要手动拓展
+     *
+     * @param name cookie name
+     * @param val  cookie value
+     */
+    public void setCookie(String name, String val) {
+        setHeader("Set-Cookie", name + "=" + val);
     }
 
     public HttpResponse() {
@@ -65,12 +99,47 @@ public class HttpResponse {
         return body;
     }
 
+    public boolean setBody(Object data) {
+        if (data instanceof JSONObject) {
+            jsonBody = (JSONObject) data;
+        } else if (data instanceof JSONArray) {
+            arrayBody = (JSONArray) data;
+        } else if (data instanceof byte[]) {
+            bytesBody = (byte[]) data;
+        } else if (data instanceof String) {
+            bytesBody = ((String) data).getBytes();
+        } else if (data instanceof File) {
+            File target = (File) data;
+            if (!target.exists()) {
+                notFound();
+            } else {
+                try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(target))) {
+                    writeBytesToBody(inputStream.readAllBytes());
+                    String fileName = target.getName();
+                    CONTENT_MAP.forEach((k, v) -> {
+                        if (fileName.endsWith(k)) setHeader("Content-Type", v);
+                    });
+                } catch (IOException e) {
+                    LOGGER.log(Logger.Level.ERROR, e.getLocalizedMessage());
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     public String getStatus() {
         return status.getMsg();
     }
 
     public void writeBytesToBody(byte[] data) {
         bytesBody = data;
+    }
+
+    public boolean emptyBody() {
+        return bytesBody == null && jsonBody == null && arrayBody == null;
     }
 
     /**
