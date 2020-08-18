@@ -112,6 +112,8 @@ public class HttpResponse {
             File target = (File) data;
             if (!target.exists()) {
                 notFound();
+            } else if (!target.isFile() || !target.canRead()) {
+                forbidden();
             } else {
                 try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(target))) {
                     writeBytesToBody(inputStream.readAllBytes());

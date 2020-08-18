@@ -76,8 +76,8 @@ public class SubReactor implements Runnable {
                             if (request != null) {
                                 request.resolve();
                                 clientInfoChannel.register(selector, SelectionKey.OP_WRITE, request);  // 注册为可写
-                            } else {  // 使用浏览器进行测试时发现，浏览器偶尔会发送为空的请求，如果不处理将导致从 Reactor 所在的整个线程死亡
-                                LOGGER.log(Logger.Level.ERROR, "非法请求");
+                            } else {  // 测试时发现，很多客户端发送为空的请求，如果不处理将导致从 Reactor 所在的整个线程死亡
+                                LOGGER.log(Logger.Level.DEBUG, "非法请求: "+request);
                                 clientInfoChannel.close();
                                 key.cancel();
                             }
@@ -87,13 +87,15 @@ public class SubReactor implements Runnable {
                         SocketChannel clientInfoChannel = (SocketChannel) key.channel();
                         // LOGGER.log(Logger.Level.NORMAL, clientInfoChannel.hashCode() + " writing...");
                         HttpRequest request = (HttpRequest) key.attachment();
-                        if (request != null) {
-                            HttpResponse response = new HttpResponse();
+                        HttpResponse response = new HttpResponse();
+                        if(request == null || request.isBadRequest()){
+                            response.badRequest();
+                        }else {
                             ControllerLinker.dispatch(request, response);  // 处理用户请求
                             LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
-                            byteToChannel(response.getHeaderRawData(), clientInfoChannel);
-                            byteToChannel(response.getBodyRawData(), clientInfoChannel);
                         }
+                        byteToChannel(response.getHeaderRawData(), clientInfoChannel);
+                        byteToChannel(response.getBodyRawData(), clientInfoChannel);
                         clientInfoChannel.close();
                         key.cancel();
                     }

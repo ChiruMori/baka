@@ -3,6 +3,7 @@ package work.cxlm.http;
 import org.json.CookieList;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import work.cxlm.util.Logger;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,6 +26,8 @@ public class HttpRequest {
     private JSONArray jsonArray;
     private JSONObject cookies;
     private HttpSession session;
+    private static final Logger LOGGER = Logger.getLogger(HttpRequest.class);
+    private boolean badRequest = false;
 
     public HttpRequest() {
     }
@@ -113,6 +116,11 @@ public class HttpRequest {
         var lines = new String(rawData).lines().iterator();
         // 请求行: GET /cx?lm=9 HTTP/1.1
         String[] requestLine = lines.next().split(" ");
+        if(requestLine.length != 3){
+            LOGGER.debug(Arrays.toString(requestLine));
+            badRequest = true;
+            return;
+        }
         type = RequestType.getType(requestLine[0]);
         // 解析 url 和查询
         String urlQuery = requestLine[1];
@@ -178,5 +186,9 @@ public class HttpRequest {
 
     public String getURL() {
         return url;
+    }
+
+    public boolean isBadRequest(){
+        return badRequest;
     }
 }

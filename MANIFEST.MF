@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Created-By: cxlm
+Class-Path: .
+Main-Class: work.cxlm.main.Application

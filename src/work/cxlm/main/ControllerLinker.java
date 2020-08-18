@@ -27,7 +27,7 @@ public class ControllerLinker {
     private static final Logger LOGGER = Logger.getLogger(ControllerLinker.class);
 
     static class ControllerToken {
-        private final Method method;
+        private final Method  method;
         private final String url;  // 映射的 URL（正则表达式）
         private final RequestType type;
 
@@ -80,7 +80,7 @@ public class ControllerLinker {
             }
             return;
         }
-        if (partMatch) response.badRequest();
+        if (partMatch || request.isBadRequest()) response.badRequest();
         else response.notFound();
     }
 

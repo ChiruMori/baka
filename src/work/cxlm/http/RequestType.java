@@ -1,7 +1,7 @@
 package work.cxlm.http;
 
 public enum RequestType {
-    GET, POST, PUT, DELETE, ALL;
+    GET, POST, PUT, DELETE, ALL, OTHERS;
 
     public static RequestType getType(String method) {
         switch (method) {
@@ -17,7 +17,7 @@ public enum RequestType {
             case "ALL":
                 return ALL;
             default:
-                return null;
+                return OTHERS;
         }
     }
 }

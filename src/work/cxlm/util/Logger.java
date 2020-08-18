@@ -12,11 +12,13 @@ import java.util.Date;
 public class Logger {
 
     public enum Level {
-        NORMAL(System.out), ERROR(System.err), DEBUG(System.out);
+        NORMAL("I", System.out), ERROR("E", System.err), DEBUG("D", System.out);
 
         private final PrintStream stream;
+        private final String prefix;
 
-        Level(PrintStream stream) {
+        Level(String prefix, PrintStream stream) {
+            this.prefix = prefix;
             this.stream = stream;
         }
 
@@ -56,6 +58,18 @@ public class Logger {
         StackTraceElement stackElement = Thread.currentThread().getStackTrace()[2];
         String methodName = stackElement.getMethodName();
         int methodLine = stackElement.getLineNumber();
-        level.log(String.format("%s %s:%d_%s - [%s]", nowTime, className, methodLine, methodName, msg));
+        level.log(String.format("%s: %s %s:%d_%s - [%s]", level.prefix, nowTime, className, methodLine, methodName, msg));
+    }
+
+    public void info(String msg) {
+        log(Level.NORMAL, msg);
+    }
+
+    public void debug(String msg) {
+        log(Level.DEBUG, msg);
+    }
+
+    public void err(String msg) {
+        log(Level.ERROR, msg);
     }
 }

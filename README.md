@@ -60,3 +60,7 @@
   
   一个请求只有在同时匹配 Mapping 指示的两个值时才有可能被成功映射到对应方法。
   
+### 打包指令
+
+jar cvfm ../baka.jar MANIFEST.MF -C ./out/production/baka .
+  
