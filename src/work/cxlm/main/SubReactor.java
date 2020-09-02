@@ -74,10 +74,10 @@ public class SubReactor implements Runnable {
                             HttpRequest request = (HttpRequest) key.attachment();
                             clientInfoChannel.shutdownInput();
                             if (request != null) {
-                                request.resolve();
+                                request.resolve(clientInfoChannel.getRemoteAddress().toString());
                                 clientInfoChannel.register(selector, SelectionKey.OP_WRITE, request);  // 注册为可写
                             } else {  // 测试时发现，很多客户端发送为空的请求，如果不处理将导致从 Reactor 所在的整个线程死亡
-                                LOGGER.log(Logger.Level.DEBUG, "非法请求: "+request);
+                                LOGGER.log(Logger.Level.DEBUG, "非法请求: " + request + ", FROM: " + clientInfoChannel.getRemoteAddress());
                                 clientInfoChannel.close();
                                 key.cancel();
                             }
@@ -92,7 +92,8 @@ public class SubReactor implements Runnable {
                             response.badRequest();
                         }else {
                             ControllerLinker.dispatch(request, response);  // 处理用户请求
-                            LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " + response.getStatus());
+                            LOGGER.log(Logger.Level.NORMAL, request.getMethod() + " " + request.getURL() + " " +
+                                    response.getStatus() + " FROM: " + request.getFromAddress());
                         }
                         byteToChannel(response.getHeaderRawData(), clientInfoChannel);
                         byteToChannel(response.getBodyRawData(), clientInfoChannel);

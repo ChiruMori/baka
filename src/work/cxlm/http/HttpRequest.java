@@ -28,6 +28,7 @@ public class HttpRequest {
     private HttpSession session;
     private static final Logger LOGGER = Logger.getLogger(HttpRequest.class);
     private boolean badRequest = false;
+    private String fromAddress;
 
     public HttpRequest() {
     }
@@ -112,47 +113,49 @@ public class HttpRequest {
 
     // 解析原始数据为实例对象，并释放字节数组
     // 在调用 putData 结束后需要调用本方法解析源字节
-    public void resolve() {
-        var lines = new String(rawData).lines().iterator();
-        // 请求行: GET /cx?lm=9 HTTP/1.1
-        String[] requestLine = lines.next().split(" ");
-        if(requestLine.length != 3){
-            LOGGER.debug(Arrays.toString(requestLine));
-            badRequest = true;
-            return;
-        }
-        type = RequestType.getType(requestLine[0]);
-        // 解析 url 和查询
-        String urlQuery = requestLine[1];
-        String[] queries = urlQuery.split("\\?");
-        url = queries[0];
-        if (queries.length == 2)
-            queryMap = resolveQueries(queries[1]);
-        // 解析 head
-        head = new HashMap<>();
-        for (String nowHeader = lines.next(); !nowHeader.isBlank(); nowHeader = lines.next()) { String[] kv = nowHeader.split(": ");
-            head.put(kv[0], kv[1]);
-        }
-        // 解析请求正文
-        while (lines.hasNext()) {
-            String lineString = lines.next();
-            // 在接受字节流时可能有问题
-            if (lineString.charAt(0) == '{')
-                jsonData = new JSONObject(lineString);
-            else if (lineString.charAt(0) == '[')
-                jsonArray = new JSONArray(lineString);
-            else
-                requestBodyMap = resolveQueries(lineString);
-        }
-        // 处理 SessionList
-        if (head.containsKey("Cookie")) {
-            cookies = CookieList.toJSONObject(head.get("Cookie"));
-            // 解析 Session
-            if (cookies.has("SID")) {
-                session = HttpSession.getSession(cookies.getString("SID"));
+    public void resolve(String fromAddress) {
+        try {
+            var lines = new String(rawData).lines().iterator();
+            // 请求行: GET /cx?lm=9 HTTP/1.1
+            String[] requestLine = lines.next().split(" ");
+            type = RequestType.getType(requestLine[0]);
+            // 解析 url 和查询
+            String urlQuery = requestLine[1];
+            String[] queries = urlQuery.split("\\?");
+            url = queries[0];
+            if (queries.length == 2)
+                queryMap = resolveQueries(queries[1]);
+            // 解析 head
+            head = new HashMap<>();
+            for (String nowHeader = lines.next(); !nowHeader.isBlank(); nowHeader = lines.next()) {
+                String[] kv = nowHeader.split(": ");
+                head.put(kv[0], kv[1]);
             }
+            // 解析请求正文
+            while (lines.hasNext()) {
+                String lineString = lines.next();
+                // 在接受字节流时可能有问题
+                if (lineString.charAt(0) == '{')
+                    jsonData = new JSONObject(lineString);
+                else if (lineString.charAt(0) == '[')
+                    jsonArray = new JSONArray(lineString);
+                else
+                    requestBodyMap = resolveQueries(lineString);
+            }
+            // 处理 SessionList
+            if (head.containsKey("Cookie")) {
+                cookies = CookieList.toJSONObject(head.get("Cookie"));
+                // 解析 Session
+                if (cookies.has("SID")) {
+                    session = HttpSession.getSession(cookies.getString("SID"));
+                }
+            }
+            rawData = null;  // 释放源字节数组，辅助 GC
+            this.fromAddress = fromAddress;
+        } catch (Exception e) {
+            LOGGER.debug("异常请求: [" + url + "], FROM: " + fromAddress);
+            badRequest = true;
         }
-        rawData = null;  // 释放源字节数组，辅助 GC
     }
 
     private Map<String, String> resolveQueries(String queriesString) {
@@ -188,7 +191,15 @@ public class HttpRequest {
         return url;
     }
 
-    public boolean isBadRequest(){
+    public boolean isBadRequest() {
         return badRequest;
+    }
+
+    public String getFromAddress() {
+        return fromAddress;
+    }
+
+    public void setFromAddress(String fromAddress) {
+        this.fromAddress = fromAddress;
     }
 }
